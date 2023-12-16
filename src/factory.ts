@@ -45,8 +45,21 @@ function HandlerFactory<T extends ExtendedAPIGatewayProxyHandler | ExtendedKines
   return middlewares.reduce((currentHandler, middleware) => middleware(currentHandler), handler);
 }
 
-// Usage example
-const myHandler: ExtendedAPIGatewayProxyHandler = async (event, context) => {
+function APIGatewayProxyHandlerFactory(handler: ExtendedAPIGatewayProxyHandler, middlewares: MiddlewareFunction<ExtendedAPIGatewayProxyHandler>[] = []): ExtendedAPIGatewayProxyHandler {
+  const defaultMiddlewares = [withTenantResolution, withAuthorization,];
+
+  return HandlerFactory(handler, [...middlewares, ...defaultMiddlewares]);
+}
+
+function KinesisStreamHandlerFactory(handler: ExtendedKinesisStreamHandler, middlewares: MiddlewareFunction<ExtendedKinesisStreamHandler>[] = []): ExtendedKinesisStreamHandler {
+  const defaultMiddlewares = [withTenantResolution, withAuthorization,];
+
+  return HandlerFactory(handler, [...middlewares, ...defaultMiddlewares]);
+}
+// -  - - - - - - 
+// worker.ts
+// -  - - - - - - 
+const myHttpHandler: ExtendedAPIGatewayProxyHandler = async (event, context) => {
   // Your handler logic here
   return {
     statusCode: 200,
@@ -54,4 +67,12 @@ const myHandler: ExtendedAPIGatewayProxyHandler = async (event, context) => {
   };
 };
 
-export const handler = HandlerFactory<ExtendedAPIGatewayProxyHandler>(myHandler, [withErrorHandling, withTenantResolution, withAuthorization]);
+const httpHandler = APIGatewayProxyHandlerFactory(myHttpHandler, [withErrorHandling]);
+
+
+const myKinesisHandler: ExtendedKinesisStreamHandler = async (event, context) => {
+  // Your handler logic here
+  return {};
+}
+
+const kinesisHandler = KinesisStreamHandlerFactory(myKinesisHandler, [withErrorHandling]);
