@@ -1,4 +1,4 @@
-
+import { Handler } from "aws-lambda";
 
 // -  - - - - - - - - - - - - - 
 // handler-factory.ts
@@ -7,9 +7,6 @@ interface HandlerContext {
   tenantId: string;
   sessionId: string;
 }
-
-
-
 
 interface HTTPHandlerResponse {
   statusCode: number;
