@@ -1,107 +1,57 @@
-import { Handler } from "aws-lambda";
+import { APIGatewayProxyHandler, KinesisStreamHandler, Context, APIGatewayEvent, APIGatewayProxyResult, Callback } from 'aws-lambda';
 
-// -  - - - - - - - - - - - - - 
-// handler-factory.ts
-// -  - - - - - - - - - - - - - 
-interface HandlerContext {
+interface ExtendedContext extends Context {
   tenantId: string;
   sessionId: string;
 }
 
-interface HTTPHandlerResponse {
-  statusCode: number;
-  body: string;
-}
+type ExtendedAPIGatewayProxyHandler = (event: APIGatewayEvent, context: ExtendedContext, callback: Callback<APIGatewayProxyResult>) => void | Promise<APIGatewayProxyResult>;
+type ExtendedKinesisStreamHandler = (event: any, context: ExtendedContext, callback: Callback<any>) => void | Promise<any>;
 
-type HTTPHandler = (event: any, context: HandlerContext) => Promise<HTTPHandlerResponse>;
-type KinesisHandler = (event: any, context: HandlerContext) => Promise<any>;
-type S3Handler = (event: any, context: HandlerContext) => Promise<any>;
+type MiddlewareFunction<T extends ExtendedAPIGatewayProxyHandler | ExtendedKinesisStreamHandler> = (handler: T) => T;
 
-type HandlerFunctionWithContext = HTTPHandler | KinesisHandler | S3Handler;
-type MiddlewareFunction<T extends HandlerFunctionWithContext> = (handler: T) => T;
-
-export function AuthorizationMiddleware<T extends HandlerFunctionWithContext>(handler: T): T {
-  function validateApiKey(apiKey: string): string {
-    if (!apiKey) {
-      throw new Error("Missing apiKey");
-    }
-
-    return "sessionId";
-  }
-
-  return (async (event: any, context: any) => {
-    const apiKey = event.headers["x-api-key"];
-    validateApiKey(apiKey);
-    return handler(event, context);
-  }) as T;
-}
-
-export function ResolveTenantMiddleware<T extends HandlerFunctionWithContext>(handler: T): T {
-  function getTenantIdByApiKey(apiKey: string) {
-    return "tenantId";
-  }
-
-  return (async (event: any, context: any) => {
-    const apiKey = event.headers["x-api-key"];
-
-    const tenantId = getTenantIdByApiKey(apiKey);
-
-    const serviceContext = { ...context, tenantId };
-
-    return await handler(event, serviceContext);
-  }) as T;
-}
-
-export const DefaultMiddleware: MiddlewareFunction<any>[] = [
-  AuthorizationMiddleware,
-  ResolveTenantMiddleware
-];
-
-
-
-// This is unique to each Lambda Trigger 
-export function HandlerFactory<T extends HandlerFunctionWithContext>(handler: T) {
-
-
-  const use = (...newMiddlewares: MiddlewareFunction<any>[]) => {
-    DefaultMiddleware.push(...newMiddlewares);
-
-    const handlerWithMiddleware = DefaultMiddleware.reduceRight(
-      (currentHandler, nextMiddleware) => nextMiddleware(currentHandler),
-      handler
-    );
-
-    return async (event: any, context: HandlerContext) => {
-      return handlerWithMiddleware(event, context);
-    };
-  };
-
-  return { use };
-};
-
-// -  - - - - - - - - - - - - - 
-// worker.ts
-// -  - - - - - - - - - - - - - 
-function withErrorHandling(handler: HTTPHandler): HTTPHandler {
-  return async (event: any, context: any): Promise<HTTPHandlerResponse> => {
+function withErrorHandling<T extends ExtendedAPIGatewayProxyHandler | ExtendedKinesisStreamHandler>(handler: T): T {
+  return (async (event: any, context: ExtendedContext, callback: Callback<APIGatewayProxyResult> & Callback<any>) => {
     try {
-      return await handler(event, context);
-    } catch (error: any) {
-      console.error(error);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: error.message || "Internal Server Error" })
-      };
+      return await handler(event, context, callback);
+    } catch (error) {
+      console.error("Error in handler:", error);
+      throw error; // Or handle the error as per your logic
     }
-  };
-};
+  }) as T;
+}
 
-async function handleRecord(event: any, context: HandlerContext): Promise<HTTPHandlerResponse> {
+function withTenantResolution<T extends ExtendedAPIGatewayProxyHandler | ExtendedKinesisStreamHandler>(handler: T): T {
+  return (async (event: { headers: { [x: string]: any; }; }, context: any, callback: Callback<APIGatewayProxyResult> & Callback<any>) => {
+    if (!event.headers || !event.headers['X-Tenant-ID']) {
+      throw new Error("Missing Tenant ID");
+    }
+    const extendedContext = { ...context, tenantId: event.headers['X-Tenant-ID'] };
+    return handler(event, extendedContext as ExtendedContext, callback);
+  }) as T;
+}
+
+function withAuthorization<T extends ExtendedAPIGatewayProxyHandler | ExtendedKinesisStreamHandler>(handler: T): T {
+  return (async (event: { headers: { [x: string]: any; }; }, context: any, callback: Callback<APIGatewayProxyResult> & Callback<any>) => {
+    if (!event.headers || !event.headers['Authorization']) {
+      throw new Error("Missing Authorization");
+    }
+    const extendedContext = { ...context, sessionId: 'extracted-session-id' }; // Extract sessionId as needed
+    return handler(event, extendedContext as ExtendedContext, callback);
+  }) as T;
+}
+
+function HandlerFactory<T extends ExtendedAPIGatewayProxyHandler | ExtendedKinesisStreamHandler>(handler: T, middlewares: MiddlewareFunction<T>[] = []): T {
+  return middlewares.reduce((currentHandler, middleware) => middleware(currentHandler), handler);
+}
+
+// Usage example
+const myHandler: ExtendedAPIGatewayProxyHandler = async (event, context) => {
+  // Your handler logic here
   return {
     statusCode: 200,
-    body: JSON.stringify({ message: `Hello from tenant ${context.tenantId}` })
+    body: JSON.stringify({ tenantId: context.tenantId, sessionId: context.sessionId })
   };
-}
+};
 
-
-export const handler = HandlerFactory<HTTPHandler>(handleRecord).use(withErrorHandling);
+export const handler = HandlerFactory<ExtendedAPIGatewayProxyHandler>(myHandler, [withErrorHandling, withTenantResolution, withAuthorization]);
