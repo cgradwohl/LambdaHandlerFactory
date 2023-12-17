@@ -1,6 +1,5 @@
-import { APIGatewayEvent, APIGatewayProxyResult, Callback } from "aws-lambda";
-import { APIGatewayHandler, APIGatewayHandlerFactory } from "../lib/api-gateway-handler-factory";
-import { ExtendedContext, MiddlewareFunction } from "../types/handler-factory";
+import { LambdaHandlerFactory } from "../lambda-handler-factory";
+import { APIGatewayHandler, MiddlewareFunction } from "../types";
 
 const handleEvent: APIGatewayHandler = async (event, context) => {
   console.log('event', event);
@@ -31,4 +30,4 @@ const withErrorHandling: MiddlewareFunction<APIGatewayHandler> = (handler) => {
   };
 }
 
-export const handler = APIGatewayHandlerFactory(handleEvent, [withErrorHandling]);
+export const handler = LambdaHandlerFactory.createAPIGatewayHandler(handleEvent, [withErrorHandling]);
