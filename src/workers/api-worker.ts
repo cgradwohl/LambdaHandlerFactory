@@ -14,10 +14,10 @@ const handleEvent: APIGatewayHandler = async (event, context) => {
   };
 }
 
-const withErrorHandling: MiddlewareFunction = (handler: APIGatewayHandler) => {
-  return async (event: APIGatewayEvent, context: ExtendedContext, callback: Callback<APIGatewayProxyResult>) => {
+const withErrorHandling: MiddlewareFunction<APIGatewayHandler> = (handler) => {
+  return async (event, context) => {
     try {
-      return await handler(event, context, callback);
+      return await handler(event, context);
     } catch (error) {
       console.error(error);
 

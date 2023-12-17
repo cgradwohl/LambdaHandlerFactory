@@ -5,4 +5,4 @@ export interface ExtendedContext extends Context {
   sessionId: string;
 }
 
-export type MiddlewareFunction = (handler: any) => any;
+export type MiddlewareFunction<T> = (handler: T) => T;
