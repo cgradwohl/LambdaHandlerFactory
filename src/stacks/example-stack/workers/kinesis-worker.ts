@@ -1,5 +1,5 @@
-import { createKinesisHandler } from "../handler-factory";
-import { KinesisHandler, MiddlewareFunction } from "../types";
+import { createKinesisWorker } from "../../../lib/workers";
+import { KinesisHandler, MiddlewareFunction } from "../../../lib/workers/types";
 
 const handleEvent: KinesisHandler = async (event, context) => {
   event.Records.forEach(record => {
@@ -18,4 +18,4 @@ const withErrorHandling: MiddlewareFunction<KinesisHandler> = (handler) => {
   };
 }
 
-export const handler = createKinesisHandler(handleEvent, [withErrorHandling]);
+export const handler = createKinesisWorker(handleEvent, [withErrorHandling]);
