@@ -1,4 +1,4 @@
-import { LambdaHandlerFactory } from "../handler-factory";
+import { createAPIGatewayHandler } from "../handler-factory";
 import { APIGatewayHandler, MiddlewareFunction } from "../types";
 
 const handleEvent: APIGatewayHandler = async (event, context) => {
@@ -30,4 +30,4 @@ const withErrorHandling: MiddlewareFunction<APIGatewayHandler> = (handler) => {
   };
 }
 
-export const handler = LambdaHandlerFactory.createAPIGatewayHandler(handleEvent, [withErrorHandling]);
+export const handler = createAPIGatewayHandler(handleEvent, [withErrorHandling]);

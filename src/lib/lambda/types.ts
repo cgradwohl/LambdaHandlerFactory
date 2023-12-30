@@ -1,4 +1,4 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult, Callback, Context, KinesisStreamBatchResponse, KinesisStreamEvent } from "aws-lambda";
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context, KinesisStreamBatchResponse, KinesisStreamEvent } from "aws-lambda";
 
 export interface ExtendedContext extends Context {
   tenantId: string;

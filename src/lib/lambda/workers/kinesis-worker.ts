@@ -1,4 +1,4 @@
-import { LambdaHandlerFactory } from "../handler-factory";
+import { createKinesisHandler } from "../handler-factory";
 import { KinesisHandler, MiddlewareFunction } from "../types";
 
 const handleEvent: KinesisHandler = async (event, context) => {
@@ -18,4 +18,4 @@ const withErrorHandling: MiddlewareFunction<KinesisHandler> = (handler) => {
   };
 }
 
-export const handler = LambdaHandlerFactory.createKinesisHandler(handleEvent, [withErrorHandling]);
+export const handler = createKinesisHandler(handleEvent, [withErrorHandling]);
