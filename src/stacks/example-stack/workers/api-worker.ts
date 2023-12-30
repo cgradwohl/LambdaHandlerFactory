@@ -1,4 +1,4 @@
-import { createAPIGatewayWorker } from "../../../lib/workers";
+import { createAPIGatewayWorker, createWorkerWithMiddlewares } from "../../../lib/workers";
 import { APIGatewayHandler, MiddlewareFunction } from "../../../lib/workers/types";
 
 const handleEvent: APIGatewayHandler = async (event, context) => {
@@ -30,4 +30,4 @@ const withErrorHandling: MiddlewareFunction<APIGatewayHandler> = (handler) => {
   };
 }
 
-export const handler = createAPIGatewayWorker(handleEvent, [withErrorHandling]);
+export const handler = createWorkerWithMiddlewares(handleEvent, [withErrorHandling]);

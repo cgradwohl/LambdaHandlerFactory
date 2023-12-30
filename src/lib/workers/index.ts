@@ -31,6 +31,11 @@ export const withPayloadValidation: MiddlewareFunction<KinesisHandler> = (handle
   };
 }
 
+// this is SO much simpler than the the latter versions but I will need to provide default middlewares
+export function createWorkerWithMiddlewares<T>(handler: T, middlewares: MiddlewareFunction<T>[]): T {
+  return middlewares.reduce((currentHandler, middleware) => middleware(currentHandler), handler);
+}
+
 
 export function createAPIGatewayWorker(handler: APIGatewayHandler, middlewares: MiddlewareFunction<APIGatewayHandler>[] = []): APIGatewayHandler {
   const defaultMiddlewares = [withAuthorization];
