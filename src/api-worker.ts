@@ -63,6 +63,26 @@ class APIGatewayWorker {
   }
 }
 
+// Lets make APIGatewayWorker more Generic
+export class LambdaWorker<T> {
+  // default middlewares
+  private middlewares: MiddlewareFunction<T>[] = [];
+
+  constructor(private handler: T) { }
+
+  with(middleware: MiddlewareFunction<T>): LambdaWorker<T> {
+    this.middlewares.push(middleware);
+    return this;
+  }
+
+  build(): T {
+    return this.middlewares.reduce(
+      (currentHandler, middleware) => middleware(currentHandler),
+      this.handler
+    );
+  }
+}
+
 // Usage
 const eventHandler: APIGatewayHandler = async (event, context) => {
   console.log('event', event);
@@ -74,7 +94,8 @@ const eventHandler: APIGatewayHandler = async (event, context) => {
   };
 };
 
-export const handler = new APIGatewayWorker(eventHandler)
+export const handler = new LambdaWorker(eventHandler)
   .with(authorization)
   .with(errorHandling)
   .build();
+
